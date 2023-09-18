@@ -74,16 +74,18 @@ class HoratiuEffect(Effect):
         super(HoratiuEffect, self).__init__(ctr)
         self.pat = None
 
-        self.preferred_frames = 2
-        self.preferred_fps = 12
+        self.preferred_frames = 30
+        self.preferred_fps = 16
 
     def reset(self, numframes=False):
         self.pat = self.ctr.make_func_pattern(lambda i: rgb_color(0, 0, 0))
 
     def launch_rt(self):
+        print("launch RTTTTTTTT!!!!!!!!!!!!!!!")
         global effect_timer
 
         def doit():
+            print("Doing it")
             self.ctr.show_rt_frame(self.getnext())
 
         if effect_timer:
@@ -94,7 +96,7 @@ class HoratiuEffect(Effect):
         return True
 
     def getnext(self):
-        #print("num: " + str(ctr.num_leds))
+        print("num: " + str(ctr.num_leds))
         # make a pattern the dumb way
         new_pattern = ctr.copy_pattern(self.pat)
         ctr.make_solid_pattern(rgb_color(0, 0, 0))
