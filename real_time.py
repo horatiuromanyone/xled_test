@@ -8,7 +8,66 @@ found a way to set color based on the LED coordinate. it wasn't easy.
 import io
 import math
 
-from xled_plus.samples.sample_setup import *
+#from xled_plus.samples.sample_setup import *
+
+# we do our own setup script so we can use the multicontrol rather than the highcontrol
+import sys
+import time
+
+from xled.discover import xdiscover
+from xled_plus.multicontrol import MultiHighControlInterface
+from xled_plus.ledcolor import *
+from xled_plus.pattern import *
+from xled_plus.effects import *
+from xled_plus.sequence import *
+from xled_plus.shapes import *
+from sys import argv
+
+
+def setup_control():
+    dev = xdiscover()
+
+    # DO THIS BETTER THO
+    hardcoded_device_count = 2
+
+    the_list_of_devices = []
+
+    for i in range(hardcoded_device_count):
+        d = next(dev)
+        print("Device: " + str(d))
+        the_list_of_devices.append(d)
+
+    print("found the " + str(hardcoded_device_count) + " devices")
+
+    hostlst = [d.ip_address for d in the_list_of_devices]
+    mhci = MultiHighControlInterface(hostlst)
+
+    return mhci
+
+
+if sys.version_info.major == 2:
+    from threading import _Timer
+
+    TimerX = _Timer
+else:
+    from threading import Timer
+
+    TimerX = Timer
+
+
+effect_timer = None
+
+
+class RepeatedTimer(TimerX):
+    def run(self):
+        lasttime = time.time()
+        self.function(*self.args, **self.kwargs)
+        while not self.finished.wait(
+            max(0.0, self.interval - (time.time() - lasttime))
+        ):
+            lasttime = time.time()
+            self.function(*self.args, **self.kwargs)
+
 
 class HoratiuEffect(Effect):
     def __init__(self, ctr):
@@ -20,6 +79,19 @@ class HoratiuEffect(Effect):
 
     def reset(self, numframes=False):
         self.pat = self.ctr.make_func_pattern(lambda i: rgb_color(0, 0, 0))
+
+    def launch_rt(self):
+        global effect_timer
+
+        def doit():
+            self.ctr.show_rt_frame(self.getnext())
+
+        if effect_timer:
+            effect_timer.cancel()
+        effect_timer = RepeatedTimer(1.0 / self.preferred_fps, doit)
+        self.reset(False)
+        effect_timer.start()
+        return True
 
     def getnext(self):
         #print("num: " + str(ctr.num_leds))
